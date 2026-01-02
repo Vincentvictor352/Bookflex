@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Contact Form Submission</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .header {
+        background-color: #0d6efd;
+        color: #ffffff;
+        padding: 20px;
+        text-align: center;
+      }
+      .content {
+        padding: 20px;
+        color: #333333;
+      }
+      .content h2 {
+        color: #0d6efd;
+      }
+      .details {
+        margin-top: 20px;
+        border-collapse: collapse;
+        width: 100%;
+      }
+      .details td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+      }
+      .footer {
+        padding: 15px 20px;
+        font-size: 12px;
+        color: #888888;
+        text-align: center;
+        border-top: 1px solid #eee;
+      }
+      .book {
+        color: red;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>New Contact Form Submission</h1>
+      </div>
+      <div class="content">
+        <p>
+          Hello, you have received a new message from your contact form:
+          <span class="book">Bookflix</span>
+        </p>
+        <table class="details" style="width: 100%">
+          <tr>
+            <td><strong>Name:</strong></td>
+            <td>{name}</td>
+          </tr>
+          <tr>
+            <td><strong>Email:</strong></td>
+            <td>{email}</td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding-top: 15px">
+              <strong>Message:</strong>
+              <div
+                style="
+                  margin-top: 5px;
+                  padding: 10px;
+                  background-color: #f9f9f9;
+                  border-radius: 5px;
+                  line-height: 1.5;
+                  word-break: break-word;
+                  white-space: pre-wrap;
+                ">
+                {message}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="footer">Sent from your website contact page. {date}</div>
+    </div>
+  </body>
+</html>
