@@ -9,7 +9,7 @@ function UserNavBar() {
   const { isOpen, toggle } = useSidebar();
   return (
     <main>
-      <section className="flex items-center justify-between px-6 h-16   border-b border-neutral-200  dark:border-neutral-800  bg-[#ffffff] dark:bg-black ">
+      <section className="flex items-center justify-between px-2 h-16   border-b border-neutral-200  dark:border-neutral-800  bg-[#ffffff] dark:bg-black ">
         {/* Left Menu */}
         <ul className="flex items-center gap-6 text-gray-700 dark:text-gray-200">
           <li className="relative">
@@ -20,10 +20,16 @@ function UserNavBar() {
             <input
               type="search"
               placeholder="Search books..."
-              className="pl-9 pr-3 py-1.5 rounded-md border border-gray-300 
-                         dark:border-neutral-800 bg-white dark:bg-[#111214] 
-                         dark:text-gray-200 
-                         focus:outline-none "
+              className="
+    pl-9 pr-3 py-1.5 rounded-md
+    border border-gray-300 dark:border-neutral-800
+    bg-white dark:bg-[#111214] dark:text-gray-200
+    focus:outline-none
+
+    w-48          
+    sm:w-48       
+    md:w-64       
+  "
             />
           </li>
         </ul>

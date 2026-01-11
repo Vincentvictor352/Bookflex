@@ -7,6 +7,7 @@ import {
   forgotPassword,
   verifyCode,
   resetPassword,
+  Logout,
 } from "../controllers/user_controller.ts";
 import validateRequest from "../middleware/validateRequest.ts";
 import {
@@ -29,4 +30,5 @@ authroute.post(
 );
 authroute.post("/verifycode", validateRequest(Verifycode), verifyCode);
 authroute.put("/resetpassword", validateRequest(ResetPassword), resetPassword);
+authroute.get("/logout", Logout);
 export default authroute;

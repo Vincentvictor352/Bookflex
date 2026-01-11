@@ -1,13 +1,12 @@
-import { eq, or } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { db } from "../configs/dbconnection.ts";
-import { usersTable } from "../models/schema.ts";
+import { otpTable, usersTable } from "../models/schema.ts";
 import argon2 from "argon2";
 import { hmacProcess, Otpcode } from "../utils/generateOtp.ts";
 import { queue as emailworker } from "../utils/Mail_worker.ts";
 import jwt from "jsonwebtoken";
 import Tokens from "../utils/JWT_helper.ts";
-// const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET as string;
-// const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET as string;
+
 const FORGETPASSWORD_SEC = process.env.FORGETPASSWORD_SEC as string;
 
 export const registerUser = async (
@@ -16,10 +15,11 @@ export const registerUser = async (
   password: string
 ) => {
   try {
+    const normalizedInput = email.toLowerCase().trim();
     const existingUser = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email));
+      .where(eq(usersTable.email, normalizedInput));
 
     if (existingUser.length > 0) {
       throw new Error("User already exists");
@@ -31,24 +31,33 @@ export const registerUser = async (
       code,
       process.env.HMAC_VERIFICATION_CODE_SECRET as string
     );
-    const expire = new Date(Date.now() + 10 * 60 * 1000);
-    const newUser = await db
+
+    const [newUser] = await db
       .insert(usersTable)
       .values({
         user_name,
-        email,
+        email: normalizedInput,
         password: hashedPassword,
-        expiretime: expire,
-        otp: hashedCode,
       })
       .returning();
+    if (!newUser) {
+      throw new Error("User not found");
+    }
+    // delete old OTPs if any
+    await db.delete(otpTable).where(eq(otpTable.userId, newUser.id));
 
-    const createdUser = newUser[0];
+    // save OTP
+    await db.insert(otpTable).values({
+      userId: newUser.id,
+      email: normalizedInput,
+      code: hashedCode,
+    });
+
     await emailworker.add(
       "send-email",
       {
         type: "otp",
-        user: createdUser,
+        user: newUser,
         verificationLink: code,
       },
       {
@@ -70,55 +79,8 @@ export const VerifyEmailService = async (
   code: string
 ): Promise<void> => {
   try {
-    const user = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email as string));
-
-    if (!user || user.length === 0) {
-      throw new Error("User not found");
-    }
-
-    const currentUser = user[0];
-    if (!currentUser) {
-      throw new Error("User not found");
-    }
-    if (currentUser.isVerified) {
-      throw new Error("User already verified");
-    }
-    if (!currentUser.expiretime) {
-      throw new Error("OTP expiry not set");
-    }
-
-    // Check OTP expiry
-    if (new Date() > currentUser.expiretime) {
-      throw new Error("OTP expired");
-    }
-
-    // Hash the code from query to compare
-    const hashedCode = hmacProcess(
-      code as string,
-      process.env.HMAC_VERIFICATION_CODE_SECRET as string
-    );
-
-    if (hashedCode !== currentUser.otp) {
-      throw new Error("Invalid verification code");
-    }
-
-    // Mark user as verified
-    await db
-      .update(usersTable)
-      .set({ isVerified: true, otp: null, expiretime: null })
-      .where(eq(usersTable.email, email as string));
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const LoginService = async (email: string, password: string) => {
-  try {
-    const normalizedInput = email.toLowerCase();
-    const user = await db
+    const normalizedInput = email.toLowerCase().trim();
+    const [user] = await db
       .select()
       .from(usersTable)
       .where(
@@ -128,36 +90,88 @@ export const LoginService = async (email: string, password: string) => {
         )
       );
 
-    if (!user || user.length === 0) {
-      throw new Error("User not found");
+    if (!user) throw new Error("User not found");
+    if (user.isVerified) throw new Error("User already verified");
+
+    const [otp] = await db
+      .select()
+      .from(otpTable)
+      .where(eq(otpTable.userId, user.id));
+    if (!otp) throw new Error("OTP not found");
+
+    const expiresAt = new Date(otp.createdAt).getTime() + 10 * 60 * 1000;
+    if (Date.now() > expiresAt) {
+      throw new Error("OTP expired");
     }
 
-    const currentUser = user[0];
-    if (!currentUser) {
-      throw new Error("User not found");
+    // Hash the code from query to compare
+    const hashedCode = hmacProcess(
+      code as string,
+      process.env.HMAC_VERIFICATION_CODE_SECRET as string
+    );
+
+    if (hashedCode !== otp.code) {
+      throw new Error("Invalid verification code");
     }
 
-    // Email not verified
-    if (!currentUser.isVerified) {
-      // OTP expired
-      if (!currentUser.expiretime || new Date() > currentUser.expiretime) {
+    // Mark user as verified
+    await db
+      .update(usersTable)
+      .set({ isVerified: true })
+      .where(eq(usersTable.id, user.id));
+    await db.delete(otpTable).where(eq(otpTable.userId, user.id));
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const LoginService = async (email: string, password: string) => {
+  try {
+    const normalizedInput = email.toLowerCase().trim();
+
+    //  Find user by email or username
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(
+        or(
+          eq(usersTable.email, normalizedInput),
+          eq(usersTable.user_name, normalizedInput)
+        )
+      );
+
+    if (!user) throw new Error("User not found");
+
+    //  Check if email is verified
+    if (!user.isVerified) {
+      // Email not verified
+      const [otp] = await db
+        .select()
+        .from(otpTable)
+        .where(eq(otpTable.userId, user.id));
+      const isExpired =
+        !otp || Date.now() > new Date(otp.createdAt).getTime() + 10 * 60 * 1000;
+
+      if (isExpired) {
+        // Generate new OTP
         const code = Otpcode();
         const hashedCode = hmacProcess(
           code,
           process.env.HMAC_VERIFICATION_CODE_SECRET as string
         );
-        const expire = new Date(Date.now() + 10 * 60 * 1000);
+        await db.delete(otpTable).where(eq(otpTable.userId, user.id));
+        await db.insert(otpTable).values({
+          userId: user.id,
+          email: user.email,
+          code: hashedCode,
+        });
 
-        await db
-          .update(usersTable)
-          .set({ otp: hashedCode, expiretime: expire })
-          .where(eq(usersTable.email, email));
-
+        // Send OTP email
         await emailworker.add(
           "send-email",
           {
             type: "otp",
-            user: currentUser,
+            user: user,
             verificationLink: code,
           },
           {
@@ -169,25 +183,28 @@ export const LoginService = async (email: string, password: string) => {
         );
 
         throw new Error(
-          "OTP expired. A new verification code has been sent to your email."
+          "Your OTP expired. A new verification code has been sent to your email. Please check your inbox."
+        );
+      } else {
+        throw new Error(
+          "check your email box and verify your email before logging in."
         );
       }
-
-      throw new Error("Please verify your email first");
     }
 
-    // Password check
-    const validPassword = await argon2.verify(currentUser.password, password);
+    // 3️⃣ Check password
+    const validPassword = await argon2.verify(user.password, password);
 
     if (!validPassword) {
       throw new Error("Invalid email or password");
     }
 
-    // Tokens
-    const accessToken = Tokens.accessToken(currentUser);
-    const refreshToken = Tokens.refreshToken(currentUser);
+    // 4️⃣ Generate tokens
 
-    return { currentUser, accessToken, refreshToken };
+    const accessToken = Tokens.accessToken(user);
+    const refreshToken = Tokens.refreshToken(user);
+
+    return { user, accessToken, refreshToken };
   } catch (error) {
     throw error;
   }
@@ -196,7 +213,7 @@ export const LoginService = async (email: string, password: string) => {
 export async function forgotPasswordService(email: string) {
   try {
     const normalizedInput = email.toLowerCase();
-    const user = await db
+    const [user] = await db
       .select()
       .from(usersTable)
       .where(
@@ -206,33 +223,25 @@ export async function forgotPasswordService(email: string) {
         )
       );
 
-    if (!user || user.length === 0) {
-      throw new Error("User not found");
-    }
-
-    const currentUser = user[0];
-    if (!currentUser) {
-      throw new Error("User not found");
-    }
-
+    if (!user) throw new Error("User not found");
     const code = Otpcode();
     const hashedCode = hmacProcess(
       code,
       process.env.HMAC_VERIFICATION_CODE_SECRET as string
     );
-
-    const expire = new Date(Date.now() + 10 * 60 * 1000);
-
-    await db
-      .update(usersTable)
-      .set({ otp: hashedCode, expiretime: expire })
-      .where(eq(usersTable.email, email));
+    await db.delete(otpTable).where(eq(otpTable.userId, user.id));
+    // save new OTP
+    await db.insert(otpTable).values({
+      userId: user.id,
+      email: user.email,
+      code: hashedCode,
+    });
 
     await emailworker.add(
       "send-email",
       {
         type: "reset-password",
-        user: currentUser,
+        user: user,
         verificationLink: code,
       },
       {
@@ -255,7 +264,7 @@ export async function forgotPasswordService(email: string) {
 export async function verifyCodeService(email: string, code: string) {
   try {
     const normalizedInput = email.toLowerCase();
-    const user = await db
+    const [user] = await db
       .select()
       .from(usersTable)
       .where(
@@ -264,34 +273,26 @@ export async function verifyCodeService(email: string, code: string) {
           eq(usersTable.user_name, normalizedInput)
         )
       );
-    if (!user || user.length === 0) {
-      throw new Error("User not found");
-    }
+    if (!user) throw new Error("User not found");
 
-    const currentUser = user[0];
-    if (!currentUser) {
-      throw new Error("User not found");
-    }
+    const [otp] = await db
+      .select()
+      .from(otpTable)
+      .where(eq(otpTable.userId, user.id));
+    if (!otp) throw new Error("OTP not found");
 
-    if (!currentUser.expiretime) {
-      throw new Error("OTP expiry not set");
-    }
-
-    if (new Date() > currentUser.expiretime) {
-      throw new Error("OTP expired");
-    }
+    const expiresAt = new Date(otp.createdAt).getTime() + 10 * 60 * 1000;
+    if (Date.now() > expiresAt) throw new Error("OTP expired");
 
     const hashedCode = hmacProcess(
       code,
       process.env.HMAC_VERIFICATION_CODE_SECRET as string
     );
 
-    if (hashedCode !== currentUser.otp) {
-      throw new Error("Invalid verification code");
-    }
+    if (hashedCode !== otp.code) throw new Error("Invalid verification code");
 
     const forgetpasswordToken = jwt.sign(
-      { id: currentUser.id, email: currentUser.email },
+      { id: user.id, email: user.email },
       FORGETPASSWORD_SEC,
       { expiresIn: "1hr" }
     );
@@ -314,34 +315,20 @@ export async function resetPasswordService(
     const decoded = jwt.verify(resetToken, FORGETPASSWORD_SEC) as any;
     const userId = decoded.id;
 
-    const user = await db
+    const [user] = await db
       .select()
       .from(usersTable)
       .where(eq(usersTable.id, userId));
 
-    if (!user || user.length === 0) {
-      throw new Error("Invalid or expired reset token");
-    }
-
-    const currentUser = user[0];
-    if (!currentUser) {
-      throw new Error("User not found");
-    }
-
-    if (!currentUser.expiretime || new Date() > currentUser.expiretime) {
-      throw new Error("Reset token expired");
-    }
+    if (!user) throw new Error("Invalid or expired reset token");
 
     const hashedPassword = await argon2.hash(newPassword);
-
     await db
       .update(usersTable)
-      .set({
-        password: hashedPassword,
-        otp: null,
-        expiretime: null,
-      })
-      .where(eq(usersTable.id, currentUser.id));
+      .set({ password: hashedPassword })
+      .where(eq(usersTable.id, userId));
+
+    await db.delete(otpTable).where(eq(otpTable.userId, userId));
   } catch (error) {
     throw error;
   }

@@ -4,19 +4,28 @@ import { HandleError, notFound } from "./middleware/ErrorHandling.ts";
 import authroute from "./routes/user_routes.ts";
 import { initalizeEmailWorker } from "./utils/Mail_worker.ts";
 import cookieParser from "cookie-parser";
-import adminrouter from "./routes/admin_controller.ts";
+import adminrouter from "./routes/admin_routes.ts";
 
+import cors from "cors";
+import bookroute from "./routes/books_routes.ts";
 config();
 const port = process.env.PORT;
 
 const app = express();
 app.use(cookieParser());
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 //middlewares
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 //routes
 app.use("/api/authv1", authroute);
 app.use("/api/admin", adminrouter);
+app.use("/api/book", bookroute);
 //error handling
 
 app.use(HandleError);

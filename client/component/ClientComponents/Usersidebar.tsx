@@ -11,12 +11,16 @@ import {
   FiX,
   FiLogOut,
 } from "react-icons/fi";
+import { Shield } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSidebar } from "@/app/context/Sidebar";
-// useSidebar
+import { logout } from "@/fetchs/services";
+
 function Usersidebar() {
   const { isOpen, close } = useSidebar();
+  const role = "admin";
+
   const mainMenu = [
     {
       name: "Home",
@@ -40,6 +44,14 @@ function Usersidebar() {
     },
   ];
 
+  if (role === "admin") {
+    mainMenu.push({
+      name: "admin",
+      icon: Shield,
+      path: "/dashboard/admin",
+    });
+  }
+
   const bottomMenu = [
     {
       name: "Settings",
@@ -49,7 +61,7 @@ function Usersidebar() {
     {
       name: "Logout",
       icon: FiLogOut,
-      action: () => console.log("logout"),
+      action: () => logout,
     },
   ];
 

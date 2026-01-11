@@ -11,7 +11,7 @@ const dummy = [
 
 function Cover_components() {
   return (
-    <main className="px-2">
+    <main className="px-2 ">
       {" "}
       <h1 className="text-2xl font-Tagesschrift dark:text-white mb-4">
         Top Read book

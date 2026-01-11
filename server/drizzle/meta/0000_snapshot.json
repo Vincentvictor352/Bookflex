@@ -1,5 +1,5 @@
 {
-  "id": "f6892494-efab-4916-9cd7-c5bae29f09a5",
+  "id": "6153b58a-705e-402c-8b5c-79e222e0dfa7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -33,11 +33,49 @@
           "primaryKey": false,
           "notNull": true
         },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Thriller'"
+        },
+        "is_featured": {
+          "name": "is_featured",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "filePublicId": {
+          "name": "filePublicId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "coverphoto": {
           "name": "coverphoto",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "coverPublicId": {
+          "name": "coverPublicId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "page_count": {
+          "name": "page_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -48,7 +86,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "books_user_id_users_id_fk": {
+          "name": "books_user_id_users_id_fk",
+          "tableFrom": "books",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -88,7 +140,7 @@
           "name": "ip_address",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "last_seen": {
           "name": "last_seen",
@@ -110,7 +162,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -168,8 +220,8 @@
           "name": "points",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "default": 50
+          "notNull": true,
+          "default": 0
         },
         "country": {
           "name": "country",

@@ -2,13 +2,17 @@
 import Link from "next/link";
 import { Eye, EyeOff, CircleX, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import Loader from "@/helper/Loader";
 
 type Inputs = {
   email: string;
   username: string;
   password: string;
 };
+import { useSignup } from "@/hooks/useSignup";
+
+import OtpModal from "./OtpModal";
 
 export default function Signup() {
   const {
@@ -16,17 +20,16 @@ export default function Signup() {
     handleSubmit,
     formState: { errors },
   } = useForm<Inputs>();
+  const [email, setEmail] = useState("");
 
-  const onSubmit: SubmitHandler<Inputs> = (data) => {
-    console.log(data);
-  };
+  const { signup, loading, otp, message } = useSignup();
+  const [showHelp, setShowHelp] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
 
   return (
     <section className="  text-white w-full  md:max-w-md ">
-      <form onSubmit={handleSubmit(onSubmit)} className="">
+      <form onSubmit={handleSubmit(signup)} className="">
         <h1 className="text-4xl tracking-tight font-bold">
           Create your account
         </h1>
@@ -38,6 +41,7 @@ export default function Signup() {
         </p>
 
         <article className="mt-12">
+          {message && <p className="text-red-400 text-sm">{message}</p>}
           {/* Email */}
           <div className="relative mt-8">
             <input
@@ -56,7 +60,7 @@ export default function Signup() {
             <label
               htmlFor="email"
               className="absolute left-0 px-4 text-gray-400 text-sm transition-all duration-200 peer-placeholder-shown:top-4 peer-placeholder-shown:text-xs peer-focus:-top-1 peer-focus:text-xs peer-focus:text-gray-400">
-              Username Email
+              Email
             </label>
             {errors.email && (
               <p className="text-red-500 flex items-center text-xs mt-2 gap-x-2">
@@ -140,7 +144,7 @@ export default function Signup() {
         <button
           type="submit"
           className="bg-red-600 text-white w-full mt-4 py-3 rounded hover:bg-red-700 transition">
-          Sign Up
+          {loading ? <Loader /> : " Sign Up"}
         </button>
 
         {/* Help dropdown */}
@@ -170,6 +174,19 @@ export default function Signup() {
           </div>
         </div>
       </form>
+
+      {otp.showOtpModal && (
+        <OtpModal
+          otp={otp.otp}
+          verifying={otp.verifying}
+          timeLeft={otp.timeLeft}
+          formatTime={otp.formatTime}
+          onChange={otp.handleOtpChange}
+          onKeyDown={otp.handleOtpKeyDown}
+          onVerify={otp.verifyOtp}
+          onClose={() => otp.setShowOtpModal(false)}
+        />
+      )}
     </section>
   );
 }

@@ -8,6 +8,7 @@ import fs from "fs";
 import { PDFDocument } from "pdf-lib";
 import { uploadTocloudinary } from "../utils/uploadTocloudinary.ts";
 import { eq } from "drizzle-orm";
+import { generateLandingCache } from "../utils/generateLandingCache.ts";
 
 export async function uploadBook(
   req: any,
@@ -17,9 +18,14 @@ export async function uploadBook(
   try {
     const bookFile = req.files?.book?.[0];
     const coverFile = req.files?.cover?.[0];
-    const { title, author } = req.body;
+    const { title, author, isFeatured, category } = req.body;
 
-    const { error } = validateupdates.validate({ title, author });
+    const { error } = validateupdates.validate({
+      title,
+      author,
+      isFeatured,
+      category,
+    });
     if (error) {
       return HandleResponse(
         res,
@@ -28,9 +34,11 @@ export async function uploadBook(
         error.details[0]?.message as string
       );
     }
+
     if (!bookFile || !coverFile) {
       return HandleResponse(res, false, 400, "Book and cover required");
     }
+
     const pdfBuffer = fs.readFileSync(bookFile.path);
 
     const pdfDoc = await PDFDocument.load(pdfBuffer);
@@ -48,14 +56,16 @@ export async function uploadBook(
     await db.insert(booksTable).values({
       title,
       author,
+      isFeatured,
       userId: req.user.id,
+      category,
       filePath: bookUpload.url,
       filePublicId: bookUpload.publicId,
       coverphoto: coverUpload.url,
       coverPublicId: coverUpload.publicId,
       pageCount,
     });
-
+    await generateLandingCache();
     // 4 Delete local files
     fs.unlinkSync(bookFile.path);
     fs.unlinkSync(coverFile.path);

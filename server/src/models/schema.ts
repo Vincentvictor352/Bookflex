@@ -18,11 +18,18 @@ export const usersTable = pgTable("users", {
   country: text(),
   role: varchar({ length: 50 }).default("user"),
   otp: text(),
-  expiretime: timestamp("expiretime"),
   isVerified: boolean("is_verified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
+export const otpTable = pgTable("otp", {
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  email: varchar({ length: 255 }).notNull(),
+  code: text("code").notNull(),
 
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 // User sessions table
 export const userSession = pgTable("user_sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -44,6 +51,8 @@ export const booksTable = pgTable("books", {
   userId: uuid("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
+  category: text("category").default("Thriller").notNull(),
+  isFeatured: boolean("is_featured").notNull().default(false),
   filePublicId: text().notNull(),
   coverphoto: text().notNull(),
   coverPublicId: text().notNull(),

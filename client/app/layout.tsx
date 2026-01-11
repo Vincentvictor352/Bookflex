@@ -19,11 +19,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="">
         {" "}
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ConditionalNav />
           <Toaster />
           {children}

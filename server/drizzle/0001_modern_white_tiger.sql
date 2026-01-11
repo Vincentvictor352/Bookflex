@@ -1,0 +1,1 @@
+ALTER TABLE "books" ALTER COLUMN "is_featured" SET NOT NULL;

@@ -1,6 +1,6 @@
 {
-  "id": "41c7c99a-913a-456a-9513-be49f72847cb",
-  "prevId": "2d110b89-2548-4dd7-ace8-3ea5bc5c6aba",
+  "id": "b1ea4eb9-eb48-46e1-ba4e-20d05b59f023",
+  "prevId": "d33db3da-a74e-40a3-a81d-e2b1d22c5df3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -39,6 +39,20 @@
           "primaryKey": false,
           "notNull": true
         },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Thriller'"
+        },
+        "is_featured": {
+          "name": "is_featured",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "filePublicId": {
           "name": "filePublicId",
           "type": "text",
@@ -56,6 +70,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "page_count": {
+          "name": "page_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -83,6 +103,66 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.otp": {
+      "name": "otp",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "otp_user_id_users_id_fk": {
+          "name": "otp_user_id_users_id_fk",
+          "tableFrom": "otp",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "otp_email_unique": {
+          "name": "otp_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -219,12 +299,6 @@
         "otp": {
           "name": "otp",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "expiretime": {
-          "name": "expiretime",
-          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },

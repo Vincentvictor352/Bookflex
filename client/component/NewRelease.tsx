@@ -1,5 +1,5 @@
 import Image from "next/image";
-import React from "react";
+import { Heart } from "lucide-react";
 
 const newRelease = [
   {
@@ -30,28 +30,57 @@ const newRelease = [
 ];
 
 export default function NewRelease() {
+  // const [favorites, setFavorites] = useState<any[]>([]);
+
+  // const toggleFavorite = async (bookId: any) => {
+  //   const isFav = favorites.includes(bookId);
+
+  //   await fetch("http://localhost:5000/api/favorites", {
+  //     method: isFav ? "DELETE" : "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //     body: JSON.stringify({ bookId }),
+  //   });
+
+  //   setFavorites((prev: any) =>
+  //     isFav ? prev.filter((id: any) => id !== bookId) : [...prev, bookId]
+  //   );
+  // };
+
   return (
     <section className="mb-8 px-2">
-      <h1 className="text-2xl dark:text-white font-Tagesschrift mt-7">
-        New Release
-      </h1>
-      <div className="grid grid-cols-2 gap-3">
-        {newRelease.map((book, index) => (
-          <div
-            key={index}
-            className="relative min-w-[150px] h-72 rounded-lg overflow-hidden shadow-lg ">
-            <Image
-              src={book.coverimage}
-              alt={book.title}
-              fill
-              className="object-cover"
-            />
-            <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm text-white p-2">
-              <h2 className="text-sm font-bold">{book.title}</h2>
-              <p className="text-xs">{book.author}</p>
+      <h1 className="text-2xl dark:text-white mt-7">New Release</h1>
+
+      <div className="grid_1">
+        {newRelease.map((book, index) => {
+          // const isFav = favorites.includes(book.id);
+
+          return (
+            <div
+              key={index}
+              className="relative min-w-[150px] h-72 rounded-lg overflow-hidden shadow-lg">
+              {/* Favorite Icon */}
+              <button
+                // onClick={() => toggleFavorite(book.id)  }
+                className="absolute top-2 right-2 z-10 bg-black/60 p-2 rounded-full">
+                <Heart size={18} />
+              </button>
+
+              <Image
+                src={book.coverimage}
+                alt={book.title}
+                fill
+                className="object-cover"
+              />
+
+              <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-sm text-white p-2">
+                <h2 className="text-sm font-bold">{book.title}</h2>
+                <p className="text-xs">{book.author}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

@@ -17,8 +17,8 @@ export const CreateUserSchema = Joi.object({
 });
 
 export const Otp = Joi.object({
-  email: Joi.string().email().required().messages({
-    "string.email": "Invalid email address",
+  email: Joi.string().required().messages({
+    "string.empty": "email or username is required",
     "any.required": "Email is required",
   }),
 
@@ -74,4 +74,25 @@ export const validateupdates = Joi.object({
   author: Joi.string().required().messages({
     "string.empty": "author is required",
   }),
+  isFeatured: Joi.boolean().required().messages({
+    "any.required": "isFeatured is required",
+    "boolean.base": "isFeatured must be true or false",
+  }),
+  category: Joi.string()
+    .valid(
+      "Thriller",
+      "Horror",
+      "Psychological Drama",
+      "Romance",
+      "Short Stories",
+      "Urban Fiction",
+      "Mystery",
+      "Inspirational"
+    )
+    .required()
+    .messages({
+      "any.only": "category must be one of the allowed options",
+      "string.empty": "Category is required",
+      "any.required": "Category is required",
+    }),
 });

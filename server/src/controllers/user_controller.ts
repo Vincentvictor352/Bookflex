@@ -16,6 +16,8 @@ import {
   verifyCodeService,
   resetPasswordService,
 } from "../services/auth_service.ts";
+import { eq } from "drizzle-orm";
+import { clearAuthCookies } from "../utils/clearCookies.ts";
 
 //regiter
 export async function Signup(
@@ -93,7 +95,7 @@ export async function Login(req: Request, res: Response, next: NextFunction) {
     const userIP = req.ip;
     const response = await LoginService(email, password);
     await db.insert(userSession).values({
-      userId: response.currentUser.id,
+      userId: response.user.id,
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       ip_address: userIP || "unknown",
@@ -113,9 +115,10 @@ export async function Login(req: Request, res: Response, next: NextFunction) {
       maxAge: 15 * 60 * 1000,
     });
     const user = {
-      user_id: response.currentUser.id,
-      email: response.currentUser.email,
-      user_name: response.currentUser.user_name,
+      user_id: response.user.id,
+      email: response.user.email,
+      user_name: response.user.user_name,
+      role: response.user.role,
     };
     HandleResponse(res, true, 200, "Login successful", {
       ...user,
@@ -126,10 +129,10 @@ export async function Login(req: Request, res: Response, next: NextFunction) {
         case "User not found":
           return HandleResponse(res, false, 404, error.message);
 
-        case "Please verify your email first":
+        case "Your OTP expired. A new verification code has been sent to your email. Please check your inbox.":
           return HandleResponse(res, false, 403, error.message);
 
-        case "OTP expired. A new verification code has been sent to your email.":
+        case "check your email box and verify your email before logging in.":
           return HandleResponse(res, false, 403, error.message);
 
         case "Invalid email or password":
@@ -236,5 +239,40 @@ export const resetPassword = async (
         next(error);
       }
     }
+  }
+};
+
+export const Logout = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    // OPTIONAL: remove session from DB
+    if (refreshToken) {
+      await db
+        .delete(userSession)
+        .where(eq(userSession.refreshToken, refreshToken));
+    }
+    // Clear cookies (must match cookie options)
+    clearAuthCookies(res);
+    // // Clear cookies
+    // res.clearCookie("accessToken", {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === "production",
+    //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    // });
+
+    // res.clearCookie("refreshToken", {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === "production",
+    //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    // });
+
+    return HandleResponse(res, true, 200, "Logged out successfully");
+  } catch (error) {
+    next(error);
   }
 };
